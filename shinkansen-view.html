@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>石川 新幹線ビュースポット</title>
+<style>
+  :root{
+    --bg:#f4f6f9;
+    --card:#ffffff;
+    --text:#1a2233;
+    --muted:#6b7684;
+    --accent:#0f6cbd;
+    --accent-soft:#e5f1fc;
+    --up:#c0392b;
+    --down:#1e6f4c;
+    --up-soft:#fdecea;
+    --down-soft:#e8f6ef;
+    --border:#e3e7ee;
+    --shadow: 0 2px 10px rgba(20,30,50,0.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#12161f;
+      --card:#1b202c;
+      --text:#eef1f6;
+      --muted:#9aa4b5;
+      --accent:#5ea3e8;
+      --accent-soft:#1c2c3d;
+      --up:#ff8378;
+      --down:#6bd3a3;
+      --up-soft:#3a2020;
+      --down-soft:#173028;
+      --border:#2a3140;
+      --shadow: 0 2px 12px rgba(0,0,0,0.35);
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Hiragino Sans","Yu Gothic",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding-bottom:90px;
+  }
+  header{
+    padding:20px 16px 12px;
+    text-align:center;
+  }
+  header h1{
+    font-size:1.15rem;
+    margin:0 0 4px;
+    font-weight:700;
+  }
+  header p{
+    margin:0;
+    font-size:0.8rem;
+    color:var(--muted);
+  }
+  .container{
+    max-width:520px;
+    margin:0 auto;
+    padding:0 14px;
+  }
+  .mode-toggle{
+    display:flex;
+    gap:8px;
+    margin:14px 0;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:5px;
+    box-shadow:var(--shadow);
+  }
+  .mode-btn{
+    flex:1;
+    border:none;
+    background:transparent;
+    padding:11px 6px;
+    border-radius:10px;
+    font-size:0.88rem;
+    font-weight:600;
+    color:var(--muted);
+    cursor:pointer;
+    transition:background .15s,color .15s;
+  }
+  .mode-btn.active{
+    background:var(--accent);
+    color:#fff;
+  }
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .gps-btn{
+    width:100%;
+    padding:14px;
+    font-size:0.95rem;
+    font-weight:700;
+    color:#fff;
+    background:var(--accent);
+    border:none;
+    border-radius:14px;
+    cursor:pointer;
+    box-shadow:var(--shadow);
+  }
+  .gps-btn:active{opacity:0.85;}
+  .gps-status{
+    font-size:0.8rem;
+    color:var(--muted);
+    text-align:center;
+    margin:10px 0 0;
+    min-height:1.1em;
+  }
+  .gps-status.error{color:var(--up);}
+
+  select{
+    width:100%;
+    padding:13px;
+    font-size:0.95rem;
+    border-radius:12px;
+    border:1px solid var(--border);
+    background:var(--card);
+    color:var(--text);
+    appearance:none;
+    -webkit-appearance:none;
+  }
+  .select-wrap{position:relative;}
+  .select-wrap::after{
+    content:"▼";
+    position:absolute;
+    right:16px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:0.7rem;
+    color:var(--muted);
+    pointer-events:none;
+  }
+
+  #results{margin-top:16px;display:flex;flex-direction:column;gap:14px;}
+
+  .spot-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:16px;
+    box-shadow:var(--shadow);
+  }
+  .spot-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:10px;
+    margin-bottom:2px;
+  }
+  .spot-name{
+    font-size:1.02rem;
+    font-weight:700;
+  }
+  .spot-dist{
+    font-size:0.78rem;
+    color:var(--accent);
+    font-weight:700;
+    white-space:nowrap;
+  }
+  .spot-desc{
+    font-size:0.78rem;
+    color:var(--muted);
+    margin:2px 0 12px;
+    line-height:1.5;
+  }
+  .badge{
+    display:inline-block;
+    font-size:0.68rem;
+    font-weight:700;
+    padding:2px 7px;
+    border-radius:999px;
+    margin-right:2px;
+  }
+  .badge.station{background:var(--accent-soft);color:var(--accent);}
+  .badge.between{background:var(--accent-soft);color:var(--accent);}
+
+  .train-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;}
+  .train-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 10px;
+    border-radius:10px;
+    background:var(--bg);
+  }
+  .dir-badge{
+    font-size:0.7rem;
+    font-weight:700;
+    padding:3px 7px;
+    border-radius:7px;
+    min-width:34px;
+    text-align:center;
+  }
+  .dir-badge.up{color:var(--up);background:var(--up-soft);}
+  .dir-badge.down{color:var(--down);background:var(--down-soft);}
+  .train-time{font-weight:700;font-size:0.95rem;min-width:52px;}
+  .train-type{font-size:0.82rem;color:var(--muted);flex:1;}
+  .train-eta{font-size:0.75rem;color:var(--muted);white-space:nowrap;}
+  .no-train{font-size:0.82rem;color:var(--muted);padding:8px 2px;}
+
+  footer{
+    position:fixed;
+    left:0;right:0;bottom:0;
+    background:var(--card);
+    border-top:1px solid var(--border);
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+    font-size:0.68rem;
+    color:var(--muted);
+    line-height:1.5;
+    text-align:center;
+  }
+  .placeholder{
+    text-align:center;
+    color:var(--muted);
+    font-size:0.85rem;
+    padding:30px 10px;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🚄 石川 新幹線ビュースポット</h1>
+    <p>北陸新幹線・加賀温泉〜金沢の見えるスポットと通過予定</p>
+  </header>
+
+  <div class="container">
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btn-gps" type="button">📍 現在地から探す</button>
+      <button class="mode-btn" id="btn-manual" type="button">🗺 場所を指定する</button>
+    </div>
+
+    <div class="panel active" id="panel-gps">
+      <button class="gps-btn" id="gps-request" type="button">現在地を取得する</button>
+      <div class="gps-status" id="gps-status"></div>
+    </div>
+
+    <div class="panel" id="panel-manual">
+      <div class="select-wrap">
+        <select id="spot-select">
+          <option value="" disabled selected>スポットを選択してください</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <footer>
+    通過時刻は公表の駅時刻表をもとにした推定計算です。停車型・通過型の速度差は反映されていません。駅間スポットの位置・所要時間は概算値です。臨時列車・遅延・ダイヤ改正には対応していません（時刻表データ:2026年8月時点）。位置情報は端末内でのみ使用し、送信しません。
+  </footer>
+
+<script>
+(function(){
+
+  // ---------- 時刻表データ（金沢駅公表時刻） ----------
+  // 上り = 東京・長野方面（金沢発）／下り = 敦賀方面（金沢発）
+  var KANAZAWA_UP = "06:02 かがやき,06:16 はくたか,06:51 つるぎ,07:03 かがやき,07:19 はくたか,07:47 つるぎ,08:10 かがやき,08:18 はくたか,08:49 つるぎ,09:07 かがやき,09:17 はくたか,09:30 つるぎ,09:53 つるぎ,10:05 かがやき,10:45 つるぎ,10:58 はくたか,11:03 つるぎ,11:49 かがやき,11:59 はくたか,12:38 つるぎ,12:58 はくたか,13:41 つるぎ,13:50 かがやき,13:58 はくたか,14:41 つるぎ,14:48 はくたか,15:04 かがやき,15:41 つるぎ,15:57 かがやき,16:07 はくたか,16:40 つるぎ,16:49 かがやき,16:53 はくたか,17:31 かがやき,17:38 つるぎ,17:57 かがやき,18:12 はくたか,18:37 つるぎ,18:52 つるぎ,19:05 はくたか,19:21 かがやき,19:54 つるぎ,20:20 はくたか,20:38 つるぎ,21:03 かがやき,21:35 はくたか,21:42 つるぎ,22:41 つるぎ,23:27 つるぎ";
+
+  var KANAZAWA_DOWN = "06:00 つるぎ,06:46 つるぎ,07:02 つるぎ,07:48 つるぎ,08:02 つるぎ,08:40 つるぎ,08:45 かがやき,09:05 つるぎ,09:46 かがやき,09:55 つるぎ,10:05 つるぎ,10:47 かがやき,11:05 つるぎ,11:54 かがやき,12:05 つるぎ,12:51 かがやき,13:05 つるぎ,14:05 つるぎ,14:19 はくたか,14:55 つるぎ,15:04 つるぎ,15:19 はくたか,15:54 つるぎ,16:05 つるぎ,16:19 はくたか,16:55 つるぎ,17:02 つるぎ,17:20 はくたか,17:55 つるぎ,18:05 つるぎ,18:22 はくたか,18:50 つるぎ,18:54 かがやき,19:06 つるぎ,19:57 かがやき,20:03 つるぎ,20:53 かがやき,20:56 つるぎ,21:32 つるぎ,22:28 かがやき,22:34 つるぎ";
+
+  // 小松駅・加賀温泉駅は公表の駅時刻表をそのまま使用（停車列車のみ）
+  var KOMATSU_UP = "06:50 かがやき,07:34 つるぎ,08:22 つるぎ,09:17 つるぎ,10:32 つるぎ,10:44 はくたか,11:30 つるぎ,11:45 はくたか,12:25 つるぎ,12:44 はくたか,13:28 つるぎ,13:44 はくたか,14:28 つるぎ,14:35 はくたか,14:58 つるぎ,15:28 つるぎ,16:27 つるぎ,17:25 つるぎ,18:24 つるぎ,19:25 つるぎ,20:25 つるぎ,20:50 かがやき,21:29 つるぎ,22:28 つるぎ,23:14 つるぎ";
+
+  var KOMATSU_DOWN = "06:11 つるぎ,07:13 つるぎ,08:13 つるぎ,08:56 かがやき,09:16 つるぎ,10:16 つるぎ,11:16 つるぎ,12:16 つるぎ,13:17 つるぎ,14:16 つるぎ,14:31 はくたか,15:15 つるぎ,15:31 はくたか,16:16 つるぎ,16:31 はくたか,17:13 つるぎ,17:32 はくたか,18:16 つるぎ,18:33 はくたか,19:17 つるぎ,20:15 つるぎ,21:08 つるぎ,21:43 つるぎ,22:39 かがやき,22:45 つるぎ";
+
+  var KAGAONSEN_UP = "07:26 つるぎ,08:14 つるぎ,08:49 かがやき,09:09 つるぎ,10:24 つるぎ,10:37 はくたか,11:22 つるぎ,11:37 はくたか,12:17 つるぎ,12:37 はくたか,13:20 つるぎ,13:37 はくたか,14:20 つるぎ,14:27 はくたか,14:50 つるぎ,15:20 つるぎ,15:40 かがやき,16:19 つるぎ,17:18 つるぎ,18:17 つるぎ,19:17 つるぎ,20:17 つるぎ,21:21 つるぎ,22:20 つるぎ,23:06 つるぎ";
+
+  var KAGAONSEN_DOWN = "06:19 つるぎ,07:21 つるぎ,08:21 つるぎ,09:24 つるぎ,10:24 つるぎ,11:24 つるぎ,12:09 かがやき,12:24 つるぎ,13:06 かがやき,13:24 つるぎ,14:24 つるぎ,14:38 はくたか,15:23 つるぎ,15:38 はくたか,16:24 つるぎ,16:39 はくたか,17:21 つるぎ,17:39 はくたか,18:24 つるぎ,18:40 はくたか,19:25 つるぎ,20:22 つるぎ,21:15 つるぎ,21:51 つるぎ,22:53 つるぎ";
+
+  function parseList(str){
+    return str.split(",").map(function(item){
+      var parts = item.trim().split(" ");
+      var hm = parts[0].split(":");
+      return { min: (+hm[0])*60 + (+hm[1]), train: parts[1] };
+    }).sort(function(a,b){ return a.min - b.min; });
+  }
+
+  var TABLE = {
+    kanazawaUp: parseList(KANAZAWA_UP),
+    kanazawaDown: parseList(KANAZAWA_DOWN),
+    komatsuUp: parseList(KOMATSU_UP),
+    komatsuDown: parseList(KOMATSU_DOWN),
+    kagaonsenUp: parseList(KAGAONSEN_UP),
+    kagaonsenDown: parseList(KAGAONSEN_DOWN)
+  };
+
+  // ---------- スポット定義 ----------
+  var SPOTS = [
+    {
+      id:"kanazawa", name:"JR金沢駅", type:"station",
+      lat:36.5780, lng:136.6486,
+      desc:"起点駅。発着シーンを間近で見られる",
+      ref:"kanazawa"
+    },
+    {
+      id:"komatsu", name:"JR小松駅", type:"station",
+      lat:36.4029, lng:136.4487,
+      desc:"金沢・加賀温泉の中間駅",
+      ref:"komatsu"
+    },
+    {
+      id:"kagaonsen", name:"JR加賀温泉駅", type:"station",
+      lat:36.3087, lng:136.3355,
+      desc:"加賀温泉郷の玄関口",
+      ref:"kagaonsen"
+    },
+    {
+      id:"hakusan", name:"トレインパーク白山（展望デッキ）", type:"between",
+      lat:36.5237, lng:136.5566,
+      desc:"白山総合車両所に隣接、時速200km超で通過する新幹線を間近に見られる公式ビュースポット",
+      segment:"kanazawa_komatsu", ratio:0.40
+    },
+    {
+      id:"tedori", name:"手取川橋梁ビューポイント", type:"between",
+      lat:36.4756, lng:136.5015,
+      desc:"新幹線が手取川を渡る橋梁。川面に映る橋脚と白山を背景に撮影できる人気スポット",
+      segment:"kanazawa_komatsu", ratio:0.65
+    },
+    {
+      id:"kobata", name:"木場潟公園", type:"between",
+      lat:36.3676, lng:136.4230,
+      desc:"白山を望む公園。線路まで距離があり遠景向き",
+      segment:"komatsu_kagaonsen", ratio:0.30
+    }
+  ];
+
+  var SEGMENT_MIN = { kanazawa_komatsu: 15, komatsu_kagaonsen: 10 };
+
+  function offsetFromKanazawa(spot){
+    if (spot.segment === "kanazawa_komatsu") return spot.ratio * SEGMENT_MIN.kanazawa_komatsu;
+    return SEGMENT_MIN.kanazawa_komatsu + spot.ratio * SEGMENT_MIN.komatsu_kagaonsen;
+  }
+
+  function getSchedule(spot){
+    if (spot.type === "station"){
+      return {
+        up: TABLE[spot.ref+"Up"],
+        down: TABLE[spot.ref+"Down"]
+      };
+    }
+    var offset = offsetFromKanazawa(spot);
+    return {
+      up: TABLE.kanazawaUp.map(function(e){ return { min: e.min - offset, train: e.train }; }),
+      down: TABLE.kanazawaDown.map(function(e){ return { min: e.min + offset, train: e.train }; })
+    };
+  }
+
+  function minToStr(min){
+    var m = ((min % 1440) + 1440) % 1440;
+    var h = Math.floor(m/60), mi = Math.round(m%60);
+    if (mi === 60){ mi = 0; h += 1; }
+    return (h<10?"0"+h:h) + ":" + (mi<10?"0"+mi:mi);
+  }
+
+  function haversine(lat1, lng1, lat2, lng2){
+    var R = 6371;
+    var dLat = (lat2-lat1) * Math.PI/180;
+    var dLng = (lng2-lng1) * Math.PI/180;
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+            Math.sin(dLng/2)*Math.sin(dLng/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  function nowMinutes(){
+    var d = new Date();
+    return d.getHours()*60 + d.getMinutes();
+  }
+
+  function upcomingTrains(spot, count){
+    var sched = getSchedule(spot);
+    var now = nowMinutes();
+    var combined = [];
+    sched.up.forEach(function(e){ combined.push({ min:e.min, train:e.train, dir:"up" }); });
+    sched.down.forEach(function(e){ combined.push({ min:e.min, train:e.train, dir:"down" }); });
+    combined = combined.filter(function(e){ return e.min >= now; });
+    combined.sort(function(a,b){ return a.min - b.min; });
+    return combined.slice(0, count);
+  }
+
+  function renderTrainList(spot){
+    var trains = upcomingTrains(spot, 4);
+    if (trains.length === 0){
+      return '<div class="no-train">本日の運行は終了しました</div>';
+    }
+    var now = nowMinutes();
+    var html = '<ul class="train-list">';
+    trains.forEach(function(t){
+      var diff = Math.round(t.min - now);
+      var dirLabel = t.dir === "up" ? "上り" : "下り";
+      var dirDest = t.dir === "up" ? "金沢・東京方面" : "加賀温泉・敦賀方面";
+      html += '<li class="train-row">' +
+        '<span class="dir-badge ' + t.dir + '">' + dirLabel + '</span>' +
+        '<span class="train-time">' + minToStr(t.min) + '</span>' +
+        '<span class="train-type">' + t.train + '（' + dirDest + '）</span>' +
+        '<span class="train-eta">' + (diff <= 0 ? "まもなく" : "あと" + diff + "分") + '</span>' +
+        '</li>';
+    });
+    html += '</ul>';
+    return html;
+  }
+
+  function spotCard(spot, distanceKm){
+    var badgeLabel = spot.type === "station" ? "駅" : "駅間スポット";
+    var distHtml = (distanceKm !== undefined) ?
+      '<span class="spot-dist">' + formatDist(distanceKm) + '</span>' : '';
+    return '<div class="spot-card">' +
+      '<div class="spot-head">' +
+        '<span class="spot-name"><span class="badge ' + spot.type + '">' + badgeLabel + '</span> ' + spot.name + '</span>' +
+        distHtml +
+      '</div>' +
+      '<div class="spot-desc">' + spot.desc + '</div>' +
+      renderTrainList(spot) +
+      '</div>';
+  }
+
+  function formatDist(km){
+    if (km < 1) return Math.round(km*1000) + "m";
+    return km.toFixed(1) + "km";
+  }
+
+  var resultsEl = document.getElementById("results");
+
+  // ---------- モード切替 ----------
+  var btnGps = document.getElementById("btn-gps");
+  var btnManual = document.getElementById("btn-manual");
+  var panelGps = document.getElementById("panel-gps");
+  var panelManual = document.getElementById("panel-manual");
+
+  function setMode(mode){
+    if (mode === "gps"){
+      btnGps.classList.add("active"); btnManual.classList.remove("active");
+      panelGps.classList.add("active"); panelManual.classList.remove("active");
+      if (lastPosition){
+        renderFromGps(lastPosition);
+      } else {
+        resultsEl.innerHTML = '<div class="placeholder">「現在地を取得する」を押してください</div>';
+      }
+    } else {
+      btnManual.classList.add("active"); btnGps.classList.remove("active");
+      panelManual.classList.add("active"); panelGps.classList.remove("active");
+      resultsEl.innerHTML = '<div class="placeholder">スポットを選択してください</div>';
+    }
+  }
+  btnGps.addEventListener("click", function(){ setMode("gps"); });
+  btnManual.addEventListener("click", function(){ setMode("manual"); });
+  btnGps.addEventListener("touchend", function(e){ e.preventDefault(); setMode("gps"); });
+  btnManual.addEventListener("touchend", function(e){ e.preventDefault(); setMode("manual"); });
+
+  // ---------- GPSモード ----------
+  var gpsStatus = document.getElementById("gps-status");
+  var gpsBtn = document.getElementById("gps-request");
+  var lastPosition = null;
+  var refreshTimer = null;
+
+  function renderFromGps(pos){
+    var lat = pos.coords.latitude, lng = pos.coords.longitude;
+    var withDist = SPOTS.map(function(s){
+      return { spot:s, dist: haversine(lat,lng,s.lat,s.lng) };
+    }).sort(function(a,b){ return a.dist - b.dist; });
+
+    resultsEl.innerHTML = withDist.map(function(w){
+      return spotCard(w.spot, w.dist);
+    }).join("");
+  }
+
+  function requestGps(){
+    if (!navigator.geolocation){
+      gpsStatus.textContent = "この端末・ブラウザは位置情報に対応していません。";
+      gpsStatus.classList.add("error");
+      return;
+    }
+    gpsStatus.classList.remove("error");
+    gpsStatus.textContent = "位置情報を取得しています…";
+    navigator.geolocation.getCurrentPosition(function(pos){
+      lastPosition = pos;
+      gpsStatus.textContent = "取得しました（誤差 約" + Math.round(pos.coords.accuracy) + "m）";
+      renderFromGps(pos);
+      if (refreshTimer) clearInterval(refreshTimer);
+      refreshTimer = setInterval(function(){
+        if (lastPosition) renderFromGps(lastPosition);
+      }, 30000);
+    }, function(err){
+      var msg = "位置情報を取得できませんでした。";
+      if (err.code === err.PERMISSION_DENIED) msg = "位置情報の利用が許可されていません。ブラウザの設定を確認してください。";
+      else if (err.code === err.POSITION_UNAVAILABLE) msg = "現在地を特定できませんでした。";
+      else if (err.code === err.TIMEOUT) msg = "位置情報の取得がタイムアウトしました。";
+      gpsStatus.textContent = msg + "（file:// で開いている場合や非HTTPS環境ではブロックされることがあります）";
+      gpsStatus.classList.add("error");
+    }, { enableHighAccuracy:true, timeout:10000, maximumAge:30000 });
+  }
+  gpsBtn.addEventListener("click", requestGps);
+
+  // ---------- 場所指定モード ----------
+  var select = document.getElementById("spot-select");
+  SPOTS.forEach(function(s){
+    var opt = document.createElement("option");
+    opt.value = s.id;
+    opt.textContent = (s.type==="station" ? "【駅】" : "【駅間】") + s.name;
+    select.appendChild(opt);
+  });
+  select.addEventListener("change", function(){
+    var spot = SPOTS.filter(function(s){ return s.id === select.value; })[0];
+    if (!spot) return;
+    resultsEl.innerHTML = spotCard(spot);
+  });
+
+  // 初期表示
+  setMode("gps");
+})();
+</script>
+</body>
+</html>
