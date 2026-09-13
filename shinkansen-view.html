@@ -251,17 +251,118 @@
   </div>
 
   <footer>
-    通過時刻は公表の駅時刻表をもとにした推定計算です。停車型・通過型の速度差は反映されていません。駅間スポットの位置・所要時間は概算値です。臨時列車・遅延・ダイヤ改正には対応していません（時刻表データ:2026年8月時点）。位置情報は端末内でのみ使用し、送信しません。
+    通過時刻は号数ごとの実測停車時刻（分かる場合）を優先し、通過型の列車のみ推定計算で補っています。駅間スポットの位置（区間内の比率）は概算値です。臨時列車・遅延・ダイヤ改正には対応していません（時刻表データ:2026年9月時点）。位置情報は端末内でのみ使用し、送信しません。
   </footer>
 
 <script>
 (function(){
 
-  // ---------- 時刻表データ（金沢駅公表時刻） ----------
-  // 上り = 東京・長野方面（金沢発）／下り = 敦賀方面（金沢発）
-  var KANAZAWA_UP = "06:02 かがやき,06:16 はくたか,06:51 つるぎ,07:03 かがやき,07:19 はくたか,07:47 つるぎ,08:10 かがやき,08:18 はくたか,08:49 つるぎ,09:07 かがやき,09:17 はくたか,09:30 つるぎ,09:53 つるぎ,10:05 かがやき,10:45 つるぎ,10:58 はくたか,11:03 つるぎ,11:49 かがやき,11:59 はくたか,12:38 つるぎ,12:58 はくたか,13:41 つるぎ,13:50 かがやき,13:58 はくたか,14:41 つるぎ,14:48 はくたか,15:04 かがやき,15:41 つるぎ,15:57 かがやき,16:07 はくたか,16:40 つるぎ,16:49 かがやき,16:53 はくたか,17:31 かがやき,17:38 つるぎ,17:57 かがやき,18:12 はくたか,18:37 つるぎ,18:52 つるぎ,19:05 はくたか,19:21 かがやき,19:54 つるぎ,20:20 はくたか,20:38 つるぎ,21:03 かがやき,21:35 はくたか,21:42 つるぎ,22:41 つるぎ,23:27 つるぎ";
+  // ---------- 時刻表データ ----------
+  // 金沢駅の列車ごとの明細（駅探の号数別詳細ページより取得）。
+  // km/ka は当該列車が小松・加賀温泉に実際に停車する場合の実測時刻（"HH:MM"）。
+  // 停車しない（通過）列車は null — 号数リンク先の詳細ページに駅そのものの行が
+  // 存在しないため実測値が取得できず、後段の通過型所要時間で推定する。
+  // as（上りのみ）: 1の場合は金沢始発列車＝敦賀・小松・加賀温泉方面から来ていない
+  // ため、駅間スポットの通過時刻計算からは除外する（幻の通過を防ぐため）。
+  var KANAZAWA_UP_RAW = [
+{t:"06:02",tr:"かがやき",as:1,km:null,ka:null},
+{t:"06:16",tr:"はくたか",as:1,km:null,ka:null},
+{t:"06:51",tr:"つるぎ",as:1,km:null,ka:null},
+{t:"07:03",tr:"かがやき",as:0,km:"06:49",ka:null},
+{t:"07:19",tr:"はくたか",as:1,km:null,ka:null},
+{t:"07:47",tr:"つるぎ",as:0,km:"07:33",ka:"07:25"},
+{t:"08:10",tr:"かがやき",as:0,km:null,ka:null},
+{t:"08:18",tr:"はくたか",as:1,km:null,ka:null},
+{t:"08:49",tr:"つるぎ",as:0,km:null,ka:null},
+{t:"09:07",tr:"かがやき",as:0,km:null,ka:"08:49"},
+{t:"09:17",tr:"はくたか",as:1,km:null,ka:null},
+{t:"09:30",tr:"つるぎ",as:0,km:"09:16",ka:"09:08"},
+{t:"09:53",tr:"つるぎ",as:0,km:null,ka:null},
+{t:"10:05",tr:"かがやき",as:0,km:null,ka:null},
+{t:"10:45",tr:"つるぎ",as:0,km:"10:31",ka:"10:23"},
+{t:"10:58",tr:"はくたか",as:0,km:"10:44",ka:"10:36"},
+{t:"11:03",tr:"つるぎ",as:0,km:null,ka:null},
+{t:"11:59",tr:"はくたか",as:0,km:"11:45",ka:"11:37"},
+{t:"12:38",tr:"つるぎ",as:0,km:"12:24",ka:"12:16"},
+{t:"12:58",tr:"はくたか",as:0,km:"12:44",ka:"12:36"},
+{t:"13:41",tr:"つるぎ",as:0,km:"13:27",ka:"13:19"},
+{t:"13:50",tr:"かがやき",as:1,km:null,ka:null},
+{t:"13:58",tr:"はくたか",as:0,km:"13:44",ka:"13:36"},
+{t:"14:41",tr:"つるぎ",as:0,km:"14:27",ka:"14:19"},
+{t:"14:48",tr:"はくたか",as:0,km:"14:34",ka:"14:26"},
+{t:"15:04",tr:"かがやき",as:1,km:null,ka:null},
+{t:"15:41",tr:"つるぎ",as:0,km:"15:27",ka:"15:19"},
+{t:"15:57",tr:"かがやき",as:0,km:null,ka:"15:39"},
+{t:"16:07",tr:"はくたか",as:1,km:null,ka:null},
+{t:"16:40",tr:"つるぎ",as:0,km:"16:26",ka:"16:18"},
+{t:"16:49",tr:"かがやき",as:0,km:null,ka:null},
+{t:"16:53",tr:"はくたか",as:1,km:null,ka:null},
+{t:"17:38",tr:"つるぎ",as:0,km:"17:25",ka:"17:17"},
+{t:"17:57",tr:"かがやき",as:0,km:null,ka:null},
+{t:"18:12",tr:"はくたか",as:1,km:null,ka:null},
+{t:"18:37",tr:"つるぎ",as:0,km:"18:24",ka:"18:16"},
+{t:"18:52",tr:"つるぎ",as:0,km:null,ka:null},
+{t:"19:05",tr:"はくたか",as:1,km:null,ka:null},
+{t:"19:21",tr:"かがやき",as:0,km:null,ka:null},
+{t:"19:54",tr:"つるぎ",as:0,km:null,ka:null},
+{t:"20:20",tr:"はくたか",as:1,km:null,ka:null},
+{t:"20:38",tr:"つるぎ",as:0,km:"20:24",ka:"20:17"},
+{t:"21:03",tr:"かがやき",as:0,km:"20:49",ka:null},
+{t:"21:35",tr:"はくたか",as:1,km:null,ka:null},
+{t:"21:42",tr:"つるぎ",as:0,km:"21:28",ka:"21:20"},
+{t:"22:41",tr:"つるぎ",as:0,km:"22:27",ka:"22:19"},
+{t:"23:27",tr:"つるぎ",as:0,km:"23:13",ka:"23:05"}
+  ];
 
-  var KANAZAWA_DOWN = "06:00 つるぎ,06:46 つるぎ,07:02 つるぎ,07:48 つるぎ,08:02 つるぎ,08:40 つるぎ,08:45 かがやき,09:05 つるぎ,09:46 かがやき,09:55 つるぎ,10:05 つるぎ,10:47 かがやき,11:05 つるぎ,11:54 かがやき,12:05 つるぎ,12:51 かがやき,13:05 つるぎ,14:05 つるぎ,14:19 はくたか,14:55 つるぎ,15:04 つるぎ,15:19 はくたか,15:54 つるぎ,16:05 つるぎ,16:19 はくたか,16:55 つるぎ,17:02 つるぎ,17:20 はくたか,17:55 つるぎ,18:05 つるぎ,18:22 はくたか,18:50 つるぎ,18:54 かがやき,19:06 つるぎ,19:57 かがやき,20:03 つるぎ,20:53 かがやき,20:56 つるぎ,21:32 つるぎ,22:28 かがやき,22:34 つるぎ";
+  var KANAZAWA_DOWN_RAW = [
+{t:"06:00",tr:"つるぎ",km:"06:11",ka:"06:18"},
+{t:"06:46",tr:"つるぎ",km:null,ka:null},
+{t:"07:02",tr:"つるぎ",km:"07:13",ka:"07:20"},
+{t:"07:48",tr:"つるぎ",km:null,ka:null},
+{t:"08:02",tr:"つるぎ",km:"08:13",ka:"08:20"},
+{t:"08:40",tr:"つるぎ",km:null,ka:null},
+{t:"08:45",tr:"かがやき",km:"08:55",ka:null},
+{t:"09:05",tr:"つるぎ",km:"09:15",ka:"09:23"},
+{t:"09:46",tr:"かがやき",km:null,ka:null},
+{t:"09:55",tr:"つるぎ",km:null,ka:null},
+{t:"10:05",tr:"つるぎ",km:"10:15",ka:"10:23"},
+{t:"10:47",tr:"かがやき",km:null,ka:null},
+{t:"11:05",tr:"つるぎ",km:"11:16",ka:"11:23"},
+{t:"11:54",tr:"かがやき",km:null,ka:"12:08"},
+{t:"12:05",tr:"つるぎ",km:"12:16",ka:"12:23"},
+{t:"12:51",tr:"かがやき",km:null,ka:"13:05"},
+{t:"13:05",tr:"つるぎ",km:"13:16",ka:"13:24"},
+{t:"14:05",tr:"つるぎ",km:"14:16",ka:"14:23"},
+{t:"14:19",tr:"はくたか",km:"14:30",ka:"14:38"},
+{t:"14:55",tr:"つるぎ",km:null,ka:null},
+{t:"15:04",tr:"つるぎ",km:"15:15",ka:"15:22"},
+{t:"15:19",tr:"はくたか",km:"15:30",ka:"15:38"},
+{t:"15:54",tr:"つるぎ",km:null,ka:null},
+{t:"16:05",tr:"つるぎ",km:"16:16",ka:"16:23"},
+{t:"16:19",tr:"はくたか",km:"16:30",ka:"16:38"},
+{t:"16:55",tr:"つるぎ",km:null,ka:null},
+{t:"17:02",tr:"つるぎ",km:"17:13",ka:"17:20"},
+{t:"17:20",tr:"はくたか",km:"17:31",ka:"17:39"},
+{t:"17:55",tr:"つるぎ",km:null,ka:null},
+{t:"18:05",tr:"つるぎ",km:"18:16",ka:"18:23"},
+{t:"18:22",tr:"はくたか",km:"18:32",ka:"18:40"},
+{t:"18:50",tr:"つるぎ",km:null,ka:null},
+{t:"18:54",tr:"かがやき",km:null,ka:null},
+{t:"19:06",tr:"つるぎ",km:"19:16",ka:"19:24"},
+{t:"19:57",tr:"かがやき",km:null,ka:null},
+{t:"20:03",tr:"つるぎ",km:"20:14",ka:"20:22"},
+{t:"20:53",tr:"かがやき",km:null,ka:null},
+{t:"20:56",tr:"つるぎ",km:"21:07",ka:"21:15"},
+{t:"21:32",tr:"つるぎ",km:"21:42",ka:"21:50"},
+{t:"22:28",tr:"かがやき",km:"22:38",ka:null},
+{t:"22:34",tr:"つるぎ",km:"22:45",ka:"22:52"}
+  ];
+
+  // 金沢-小松・小松-加賀温泉の「通過型」列車（停車せず実測値がない場合）の
+  // 所要時間の推定値（分）。停車型の実測平均（金沢-小松 約12.4分、
+  // 小松-加賀温泉 約7.7分）から、停車に伴う減速・停車・加速のロス
+  // （新幹線の途中駅停車で一般的に2分前後とされる）を差し引いた推定値。
+  var THROUGH_MIN = { kanazawaKomatsu: 10, komatsuKagaonsen: 6 };
 
   // 小松駅・加賀温泉駅は公表の駅時刻表をそのまま使用（停車列車のみ）
   var KOMATSU_UP = "06:50 かがやき,07:34 つるぎ,08:22 つるぎ,09:17 つるぎ,10:32 つるぎ,10:44 はくたか,11:30 つるぎ,11:45 はくたか,12:25 つるぎ,12:44 はくたか,13:28 つるぎ,13:44 はくたか,14:28 つるぎ,14:35 はくたか,14:58 つるぎ,15:28 つるぎ,16:27 つるぎ,17:25 つるぎ,18:24 つるぎ,19:25 つるぎ,20:25 つるぎ,20:50 かがやき,21:29 つるぎ,22:28 つるぎ,23:14 つるぎ";
@@ -280,9 +381,27 @@
     }).sort(function(a,b){ return a.min - b.min; });
   }
 
+  function toMin(hhmm){
+    if (!hhmm) return null;
+    var hm = hhmm.split(":");
+    return (+hm[0])*60 + (+hm[1]);
+  }
+
+  function parseKanazawaRaw(raw){
+    return raw.map(function(r){
+      return {
+        min: toMin(r.t),
+        train: r.tr,
+        atStart: !!r.as,
+        komatsu: toMin(r.km),
+        kagaonsen: toMin(r.ka)
+      };
+    }).sort(function(a,b){ return a.min - b.min; });
+  }
+
   var TABLE = {
-    kanazawaUp: parseList(KANAZAWA_UP),
-    kanazawaDown: parseList(KANAZAWA_DOWN),
+    kanazawaUp: parseKanazawaRaw(KANAZAWA_UP_RAW),
+    kanazawaDown: parseKanazawaRaw(KANAZAWA_DOWN_RAW),
     komatsuUp: parseList(KOMATSU_UP),
     komatsuDown: parseList(KOMATSU_DOWN),
     kagaonsenUp: parseList(KAGAONSEN_UP),
@@ -329,11 +448,28 @@
     }
   ];
 
-  var SEGMENT_MIN = { kanazawa_komatsu: 15, komatsu_kagaonsen: 10 };
+  // 列車ごとの実測時刻（あれば）を優先し、無ければ通過型所要時間で補う
+  // 「実効時刻」を求める。isUp: true=小松/加賀温泉→金沢方向で時刻は金沢より前、
+  // false=金沢→小松/加賀温泉方向で時刻は金沢より後。
+  function effectiveKomatsu(entry, isUp){
+    if (entry.komatsu != null) return entry.komatsu;
+    return isUp ? entry.min - THROUGH_MIN.kanazawaKomatsu : entry.min + THROUGH_MIN.kanazawaKomatsu;
+  }
+  function effectiveKagaonsen(entry, isUp, effKomatsu){
+    if (entry.kagaonsen != null) return entry.kagaonsen;
+    return isUp ? effKomatsu - THROUGH_MIN.komatsuKagaonsen : effKomatsu + THROUGH_MIN.komatsuKagaonsen;
+  }
 
-  function offsetFromKanazawa(spot){
-    if (spot.segment === "kanazawa_komatsu") return spot.ratio * SEGMENT_MIN.kanazawa_komatsu;
-    return SEGMENT_MIN.kanazawa_komatsu + spot.ratio * SEGMENT_MIN.komatsu_kagaonsen;
+  // 駅間スポットの通過時刻 = 区間の実効両端時刻を、位置比率で線形補間したもの。
+  // 実測アンカー（停車型）があればそのまま使い、無い列車（通過型）だけ
+  // THROUGH_MIN による推定を使う。
+  function betweenStationTime(spot, entry, isUp){
+    var effKomatsu = effectiveKomatsu(entry, isUp);
+    if (spot.segment === "kanazawa_komatsu"){
+      return entry.min + spot.ratio * (effKomatsu - entry.min);
+    }
+    var effKagaonsen = effectiveKagaonsen(entry, isUp, effKomatsu);
+    return effKomatsu + spot.ratio * (effKagaonsen - effKomatsu);
   }
 
   function getSchedule(spot){
@@ -343,10 +479,11 @@
         down: TABLE[spot.ref+"Down"]
       };
     }
-    var offset = offsetFromKanazawa(spot);
+    // 金沢始発（atStart）の上り列車は小松・加賀温泉方面から来ていないため除外
+    var upEntries = TABLE.kanazawaUp.filter(function(e){ return !e.atStart; });
     return {
-      up: TABLE.kanazawaUp.map(function(e){ return { min: e.min - offset, train: e.train }; }),
-      down: TABLE.kanazawaDown.map(function(e){ return { min: e.min + offset, train: e.train }; })
+      up: upEntries.map(function(e){ return { min: betweenStationTime(spot, e, true), train: e.train }; }),
+      down: TABLE.kanazawaDown.map(function(e){ return { min: betweenStationTime(spot, e, false), train: e.train }; })
     };
   }
 
