@@ -177,6 +177,16 @@
     margin-right:2px;
   }
   .badge.station{background:var(--accent-soft);color:var(--accent);}
+  .est-badge{
+    display:inline-block;
+    font-size:0.65rem;
+    font-weight:700;
+    padding:1px 6px;
+    border-radius:999px;
+    background:var(--up-soft);
+    color:var(--up);
+    white-space:nowrap;
+  }
   .badge.between{background:var(--accent-soft);color:var(--accent);}
 
   .train-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;}
@@ -462,28 +472,59 @@
 
   // 駅間スポットの通過時刻 = 区間の実効両端時刻を、位置比率で線形補間したもの。
   // 実測アンカー（停車型）があればそのまま使い、無い列車（通過型）だけ
-  // THROUGH_MIN による推定を使う。
+  // THROUGH_MIN による推定を使う。estimated: 補間に推定値を使ったかどうか。
   function betweenStationTime(spot, entry, isUp){
     var effKomatsu = effectiveKomatsu(entry, isUp);
     if (spot.segment === "kanazawa_komatsu"){
-      return entry.min + spot.ratio * (effKomatsu - entry.min);
+      return { min: entry.min + spot.ratio * (effKomatsu - entry.min), estimated: entry.komatsu == null };
     }
     var effKagaonsen = effectiveKagaonsen(entry, isUp, effKomatsu);
-    return effKomatsu + spot.ratio * (effKagaonsen - effKomatsu);
+    return {
+      min: effKomatsu + spot.ratio * (effKagaonsen - effKomatsu),
+      estimated: entry.komatsu == null || entry.kagaonsen == null
+    };
+  }
+
+  // 小松駅・加賀温泉駅で「通過（停車しない）」列車の推定時刻一覧を作る。
+  // 駅の公式時刻表（停車列車のみ）を補う形で使う。
+  function stationPassingList(direction, targetStation){
+    var isUp = direction === "up";
+    var entries = isUp ? TABLE.kanazawaUp.filter(function(e){ return !e.atStart; }) : TABLE.kanazawaDown;
+    var out = [];
+    entries.forEach(function(e){
+      if (targetStation === "komatsu"){
+        if (e.komatsu == null){
+          out.push({ min: effectiveKomatsu(e, isUp), train: e.train, estimated: true });
+        }
+      } else {
+        if (e.kagaonsen == null){
+          var effKomatsu = effectiveKomatsu(e, isUp);
+          out.push({ min: effectiveKagaonsen(e, isUp, effKomatsu), train: e.train, estimated: true });
+        }
+      }
+    });
+    return out;
   }
 
   function getSchedule(spot){
     if (spot.type === "station"){
+      if (spot.ref === "kanazawa"){
+        return { up: TABLE.kanazawaUp, down: TABLE.kanazawaDown };
+      }
+      var realUp = TABLE[spot.ref+"Up"].map(function(e){ return { min:e.min, train:e.train, estimated:false }; });
+      var realDown = TABLE[spot.ref+"Down"].map(function(e){ return { min:e.min, train:e.train, estimated:false }; });
+      var passUp = stationPassingList("up", spot.ref);
+      var passDown = stationPassingList("down", spot.ref);
       return {
-        up: TABLE[spot.ref+"Up"],
-        down: TABLE[spot.ref+"Down"]
+        up: realUp.concat(passUp).sort(function(a,b){ return a.min - b.min; }),
+        down: realDown.concat(passDown).sort(function(a,b){ return a.min - b.min; })
       };
     }
     // 金沢始発（atStart）の上り列車は小松・加賀温泉方面から来ていないため除外
     var upEntries = TABLE.kanazawaUp.filter(function(e){ return !e.atStart; });
     return {
-      up: upEntries.map(function(e){ return { min: betweenStationTime(spot, e, true), train: e.train }; }),
-      down: TABLE.kanazawaDown.map(function(e){ return { min: betweenStationTime(spot, e, false), train: e.train }; })
+      up: upEntries.map(function(e){ var r = betweenStationTime(spot, e, true); return { min: r.min, train: e.train, estimated: r.estimated }; }),
+      down: TABLE.kanazawaDown.map(function(e){ var r = betweenStationTime(spot, e, false); return { min: r.min, train: e.train, estimated: r.estimated }; })
     };
   }
 
@@ -513,8 +554,8 @@
     var sched = getSchedule(spot);
     var now = nowMinutes();
     var combined = [];
-    sched.up.forEach(function(e){ combined.push({ min:e.min, train:e.train, dir:"up" }); });
-    sched.down.forEach(function(e){ combined.push({ min:e.min, train:e.train, dir:"down" }); });
+    sched.up.forEach(function(e){ combined.push({ min:e.min, train:e.train, dir:"up", estimated:!!e.estimated }); });
+    sched.down.forEach(function(e){ combined.push({ min:e.min, train:e.train, dir:"down", estimated:!!e.estimated }); });
     combined = combined.filter(function(e){ return e.min >= now; });
     combined.sort(function(a,b){ return a.min - b.min; });
     return combined.slice(0, count);
@@ -531,10 +572,16 @@
       var diff = Math.round(t.min - now);
       var dirLabel = t.dir === "up" ? "上り" : "下り";
       var dirDest = t.dir === "up" ? "金沢・東京方面" : "加賀温泉・敦賀方面";
+      var estLabel = "";
+      if (t.estimated){
+        estLabel = spot.type === "station" ?
+          ' <span class="est-badge">通過(推定)</span>' :
+          ' <span class="est-badge">推定</span>';
+      }
       html += '<li class="train-row">' +
         '<span class="dir-badge ' + t.dir + '">' + dirLabel + '</span>' +
         '<span class="train-time">' + minToStr(t.min) + '</span>' +
-        '<span class="train-type">' + t.train + '（' + dirDest + '）</span>' +
+        '<span class="train-type">' + t.train + '（' + dirDest + '）' + estLabel + '</span>' +
         '<span class="train-eta">' + (diff <= 0 ? "まもなく" : "あと" + diff + "分") + '</span>' +
         '</li>';
     });
